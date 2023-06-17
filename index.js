@@ -1,7 +1,5 @@
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
-// Local packages
-const app = require('./app');
 
 // ERROR HANDLING: Managed here to ensure no errors go unhandled
 // Adds event handler to the process object
@@ -27,6 +25,11 @@ process.on('unhandledRejection', (err) => {
 // Load environment variables from the config.env file
 // Do this before loading app / webserver object
 dotenv.config({ path: './config.env' });
+
+// Import the main application module here 🚫
+// Allows errors in app and related modules to be handled globally
+// Makes environment variables availabe in app and all other local packages
+const app = require('./app');
 
 // Log the current environment (Production / Development)
 console.log(
