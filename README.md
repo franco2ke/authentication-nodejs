@@ -1,4 +1,8 @@
 # Authentication (NODEJS)
 
 Authentication is a node.js, mongoDB based app boilerplate with modern multifactor authentication built in.
-It is to be used as a foundation for building various web apps and APIs.
+Use as a foundation for building various web apps and APIs.
+
+## How to Setup
+
+1. Rename config.sample.env to config.env and replace placeholder values, with your environment details.
