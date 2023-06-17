@@ -35,6 +35,7 @@ console.log(
 
 // Connect to Database per environment
 // Generate Database connect string, replace <PASSWORD> placeholder
+
 let DB;
 if (process.env.NODE_ENV === 'production') {
   DB = process.env.DATABASE_PRODUCTION.replace(
