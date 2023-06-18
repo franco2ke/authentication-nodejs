@@ -7,6 +7,9 @@ const mongoSanitize = require('express-mongo-sanitize'); // Prevent NoSQL query 
 const xss = require('xss-clean'); // Prevent cross-site scripting attacks
 const hpp = require('hpp'); // Prevent parameter pollution
 
+// Import routers as middleware for mounting on the app object
+const userRouter = require('./routes/userRoutes');
+
 // Create webserver object with express related methods and properties
 const app = express();
 
@@ -85,17 +88,8 @@ app.use((req, res, next) => {
 });
 
 //  5) ROUTING MIDDLEWARE: Define API URL routes
-// app.use("/api/v1/users", userRouter); // Mount user router
 
-// Create routing middleware
-app.get('/api/v1/users', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    data: {
-      answer: 'Hello Authentication!',
-    },
-  });
-});
+app.use('/api/v1/users', userRouter); // Mount user router
 
 // Catch all route for handling ALL unrecognized routes
 app.all('*', (req, res, next) => {
