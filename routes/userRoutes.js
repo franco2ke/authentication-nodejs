@@ -1,38 +1,32 @@
 const express = require('express');
+const authController = require('../controllers/authController');
 
 // Create a router instance
 const router = express.Router();
 
-// placeholder response handler before implementation of custom functions
-let sendDefaultResponse = (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    data: {
-      answer: 'Hello Authentication!',
-    },
-  });
-};
-
 // Authentication routes
-router.post('/signup', sendDefaultResponse);
-router.post('/login', sendDefaultResponse);
-router.post('/mfa', sendDefaultResponse);
-router.post('/forgotPassword', sendDefaultResponse);
-router.patch('/resetPassword/:token', sendDefaultResponse);
-router.patch('/updateMyPassword/:token', sendDefaultResponse);
+router.post('/signup', authController.signup);
+router.post('/login', authController.sendDefaultResponse);
+router.post('/mfa', authController.sendDefaultResponse);
+router.post('/forgotPassword', authController.sendDefaultResponse);
+router.patch('/resetPassword/:token', authController.sendDefaultResponse);
+router.patch('/updateMyPassword/:token', authController.sendDefaultResponse);
 
 // Current User routes
-router.patch('/updateMe', sendDefaultResponse);
-router.delete('/deleteMe', sendDefaultResponse);
+router.patch('/updateMe', authController.sendDefaultResponse);
+router.delete('/deleteMe', authController.sendDefaultResponse);
 
 // Admin User routes
 // get all users, create a new user
-router.route('/').get(sendDefaultResponse).post(sendDefaultResponse);
+router
+  .route('/')
+  .get(authController.sendDefaultResponse)
+  .post(authController.sendDefaultResponse);
 // get, update, delete, specific user
 router
   .route('/:id')
-  .get(sendDefaultResponse)
-  .patch(sendDefaultResponse)
-  .delete(sendDefaultResponse);
+  .get(authController.sendDefaultResponse)
+  .patch(authController.sendDefaultResponse)
+  .delete(authController.sendDefaultResponse);
 
 module.exports = router;
