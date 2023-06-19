@@ -7,6 +7,10 @@ const mongoSanitize = require('express-mongo-sanitize'); // Prevent NoSQL query 
 const xss = require('xss-clean'); // Prevent cross-site scripting attacks
 const hpp = require('hpp'); // Prevent parameter pollution
 
+// Import local modules
+const AppError = require('./utils/appError');
+const globalErrorHandler = require('./controllers/errorController');
+
 // Import routers as middleware for mounting on the app object
 const userRouter = require('./routes/userRoutes');
 
@@ -91,13 +95,14 @@ app.use((req, res, next) => {
 
 app.use('/api/v1/users', userRouter); // Mount user router
 
-// Catch all route for handling ALL unrecognized routes
+// Catch all route for handling ALL unrecognized / non existent routes
 app.all('*', (req, res, next) => {
-  // TODO add error response
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
   next();
 });
 
 // ERROR HANDLING MIDDLEWARE
-// TODO create the global error handler for operational errors during request, response cycle
+// mount the global error handler for operational errors during request, response cycle
+app.use(globalErrorHandler);
 
 module.exports = app;
