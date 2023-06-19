@@ -9,6 +9,7 @@ const hpp = require('hpp'); // Prevent parameter pollution
 
 // Import local modules
 const AppError = require('./utils/appError');
+const globalErrorHandler = require('./controllers/errorController');
 
 // Import routers as middleware for mounting on the app object
 const userRouter = require('./routes/userRoutes');
@@ -101,6 +102,7 @@ app.all('*', (req, res, next) => {
 });
 
 // ERROR HANDLING MIDDLEWARE
-// TODO create the global error handler for operational errors during request, response cycle
+// mount the global error handler for operational errors during request, response cycle
+app.use(globalErrorHandler);
 
 module.exports = app;
