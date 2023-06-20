@@ -38,6 +38,8 @@
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.3.0",
     "morgan": "^1.10.0",
+    "nodemailer": "^6.9.3",
+    "nodemailer-postmark-transport": "^5.2.1",
     "otp-generator": "^4.0.1",
     "validator": "^13.9.0",
     "xss-clean": "^0.1.4"
