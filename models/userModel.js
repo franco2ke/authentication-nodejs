@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
-const validator = require('validator');
+const validator = require('validator'); // data validation library
+const bcrypt = require('bcryptjs'); // enterprise-grade password hashing library
+const otpGenerator = require('otp-generator'); //one time passcode generator
+const crypto = require('crypto');
 
 // firstname, surname, email, mobile no, photo, password, passwordConfirm
 const userSchema = new mongoose.Schema({
@@ -42,7 +45,7 @@ const userSchema = new mongoose.Schema({
     minlength: 8,
     validate: [
       validator.isStrongPassword,
-      'Password does not meet strength requirements',
+      `Password is weak, use atleast 8 characters with 1 number, 1 lowercase, 1 uppercase & 1 symbol`,
     ],
     select: false, // hide password field from query results by default
   },
@@ -58,6 +61,8 @@ const userSchema = new mongoose.Schema({
       message: 'Passwords are not the same!',
     },
   },
+  otpHashed: String,
+  otpExpires: Date,
   passwordChangedAt: Date,
   passwordResetToken: String,
   passwordResetExpires: Date,
@@ -71,12 +76,41 @@ const userSchema = new mongoose.Schema({
   // Mark active and non-active (as deleted)
   active: {
     type: Boolean,
-    default: true,
+    default: false,
     select: false,
   },
 });
 
-const User = moongoose.model('User', userSchema);
+// 1) Mongoose pre - save middleware to encrypt user password on database save
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next(); // skip if password not modified (created/saved)
+  this.password = await bcrypt.hash(this.password, 12); // hash password using bcrypt
+  // remove passwordConfirm field from document as necessary only for password validation
+  // setting document field to undefined, will not save it == deletion
+  this.passwordConfirm = undefined;
+  next();
+});
+
+// 2) Instance Method to generate 6 digit OTP & save to DB
+userSchema.methods.createOTP = function () {
+  // generate OTP
+  let otp = otpGenerator.generate(6, {
+    upperCaseAlphabets: false,
+    specialChars: false,
+    lowerCaseAlphabets: false,
+  });
+  // encrypt OTP (security measure) and store in DB
+  this.otpHashed = crypto.createHash('sha256').update(otp).digest('hex');
+
+  console.log(`The reset token sent to user via email:\n`, { otp });
+  console.log(`The encrypted reset token (DB): ${this.otpHashed}`);
+  // Set Token expiry time (3 min in milliseconds) and store in DB
+  this.otpExpires = Date.now() + 3 * 60 * 1000;
+
+  return otp;
+};
+
+const User = mongoose.model('User', userSchema);
 
 // Export the User model
 module.exports = User;
