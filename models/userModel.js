@@ -92,7 +92,7 @@ userSchema.pre('save', async function (next) {
 });
 
 // 2) Instance Method to generate 6 digit OTP & save to DB
-userSchema.methods.createOTP = function () {
+userSchema.methods.createOTP = async function () {
   // generate OTP
   let otp = otpGenerator.generate(6, {
     upperCaseAlphabets: false,
@@ -106,6 +106,8 @@ userSchema.methods.createOTP = function () {
   console.log(`The encrypted reset token (DB): ${this.otpHashed}`);
   // Set Token expiry time (3 min in milliseconds) and store in DB
   this.otpExpires = Date.now() + 3 * 60 * 1000;
+
+  await this.save();
 
   return otp;
 };
