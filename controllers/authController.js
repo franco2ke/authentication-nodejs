@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const AppError = require('../utils/appError');
+const sendEmail = require('../utils/email');
 
 // Helper function 1: Create JWT token with user ID as payload
 // JWT token used for STATELESS Login
@@ -61,14 +62,21 @@ exports.signup = async (req, res, next) => {
     });
 
     // generate otp & save to database
-    let otp = newUser.createOTP();
+    let otp = await newUser.createOTP();
+
+    // email message
+    const message = `Your authenticate OTP code is: ${otp}. Valid for 5 minutes`;
+    // send otp to user email
+    await sendEmail({
+      email: newUser.email,
+      subject: 'Authenticate: Your OTP, One-Time PassCode',
+      message,
+    });
 
     // send
     res.status(201).json({
       status: 'success',
-      data: {
-        newUser,
-      },
+      message: 'One-Time verification code sent to email',
     });
 
     // TODO send otp via email
