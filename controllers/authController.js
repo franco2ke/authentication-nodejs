@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const AppError = require('../utils/appError');
 const sendEmail = require('../utils/email');
+const catchAsync = require('../utils/catchAsync');
 
 // Helper function 1: Create JWT token with user ID as payload
 // JWT token used for STATELESS Login
@@ -46,50 +47,43 @@ const createSendToken = (user, statusCode, res) => {
     status: 'success',
     data: {
       name: user.firstname,
-      emai: user.email,
+      email: user.email,
     },
   });
 };
 
 // A) Sign Up Handler
-exports.signup = async (req, res, next) => {
-  try {
-    const newUser = await User.create({
-      firstname: req.body.name,
-      email: req.body.email,
-      password: req.body.password,
-      passwordConfirm: req.body.passwordConfirm,
-    });
+exports.signup = catchAsync(async (req, res, next) => {
+  const newUser = await User.create({
+    firstname: req.body.name,
+    email: req.body.email,
+    password: req.body.password,
+    passwordConfirm: req.body.passwordConfirm,
+  });
 
-    // generate otp & save to database
-    let otp = await newUser.createOTP();
+  // generate otp & save to database
+  let otp = await newUser.createOTP();
 
-    // email message
-    const message = `Your authenticate OTP code is: ${otp}. Valid for 5 minutes`;
-    // send otp to user email
-    await sendEmail({
-      email: newUser.email,
-      subject: 'Authenticate: Your OTP, One-Time PassCode',
-      message,
-    });
+  // email message
+  const message = `Your authenticate one time passcode is: ${otp}. Valid for ${process.env.OTP_EXPIRES_IN} minutes`;
+  // send otp to user email
+  await sendEmail({
+    email: newUser.email,
+    subject: 'authenticate: Your sign up one time passcode',
+    message,
+  });
 
-    // send
-    res.status(201).json({
-      status: 'success',
-      message: 'One-Time verification code sent to email',
-    });
-
-    // TODO send otp via email
-  } catch (err) {
-    // error caught by global handler so just forwarding is ok
-    next(err);
-  }
-};
+  // send
+  res.status(201).json({
+    status: 'success',
+    message: `one time sign up passcode sent to ${newUser.email}`,
+  });
+});
 
 // B) Verify Account Handler
 // verifies signup OTP & marks email as confirmed
-exports.verify = async (req, res, next) => {
-  try {
+exports.verify = catchAsync(
+  (exports.verify = async (req, res, next) => {
     // encrypt returned OTP and compare in DB
     const otp = crypto.createHash('sha256').update(req.body.otp).digest('hex');
 
@@ -116,10 +110,8 @@ exports.verify = async (req, res, next) => {
     await user.save();
     // create and send login token to user; reset otpHashed
     createSendToken(user, 201, res);
-  } catch (err) {
-    next(err);
-  }
-};
+  })
+);
 
 // B) Default placeholder handler before implementation of custom functions
 exports.sendDefaultResponse = (req, res) => {

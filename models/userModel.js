@@ -104,8 +104,9 @@ userSchema.methods.createOTP = async function () {
 
   console.log(`The reset token sent to user via email:\n`, { otp });
   console.log(`The encrypted reset token (DB): ${this.otpHashed}`);
-  // Set Token expiry time (3 min in milliseconds) and store in DB
-  this.otpExpires = Date.now() + 3 * 60 * 1000;
+  // Set Token expiry time in milliseconds and store in DB
+  // For 5 min: OTP_EXPIRES_IN = 5
+  this.otpExpires = Date.now() + process.env.OTP_EXPIRES_IN * 60 * 1000;
 
   await this.save();
 
