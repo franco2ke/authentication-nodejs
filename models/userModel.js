@@ -113,6 +113,19 @@ userSchema.methods.createOTP = async function () {
   return otp;
 };
 
+// 3) Instance method to compare submitted & stored user password
+// Implemented here due ot FAT MODEL, THIN CONTROLLER principle
+// compare passwords and return true if same
+userSchema.methods.correctPassword = async function (
+  candidatePassword, // password from request
+  userPassword // the hashed user password stored in DB
+) {
+  // 'this' points to document but 'this.userPassword' not available
+  // because it is hidden through the modelSchema; ('select': false)
+  // therefore it needs to be passed in
+  return await bcrypt.compare(candidatePassword, userPassword);
+};
+
 const User = mongoose.model('User', userSchema);
 
 // Export the User model
