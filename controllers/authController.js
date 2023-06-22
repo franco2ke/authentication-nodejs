@@ -82,38 +82,75 @@ exports.signup = catchAsync(async (req, res, next) => {
 
 // B) Verify Account Handler
 // verifies signup OTP & marks email as confirmed
-exports.verify = catchAsync(
-  (exports.verify = async (req, res, next) => {
-    // encrypt returned OTP and compare in DB
-    const otp = crypto.createHash('sha256').update(req.body.otp).digest('hex');
+exports.verify = catchAsync(async (req, res, next) => {
+  // encrypt returned OTP and compare in DB
+  const otp = crypto.createHash('sha256').update(req.body.otp).digest('hex');
 
-    // check if user exists and otp has not expired
-    // mongoDB will automatically convert the Date format for accurate comparison
-    let user = await User.findOne({
-      otpHashed: otp,
-      email: req.body.email,
-      otpExpires: { $gt: Date.now() },
-    }).select(['-__v', '-phone']);
+  // check if user exists and otp has not expired
+  // mongoDB will automatically convert the Date format for accurate comparison
+  let user = await User.findOne({
+    otpHashed: otp,
+    email: req.body.email,
+    otpExpires: { $gt: Date.now() },
+  }).select(['-__v', '-phone']);
 
-    // if user does not exist return error message in response
-    if (!user) {
-      return next(
-        new AppError(
-          'The otp is invalid or has expired, Login to get new one',
-          400
-        )
-      );
-    }
-    // update account to active, and reset otp
-    user.otpHashed = undefined;
-    user.active = true;
-    await user.save();
-    // create and send login token to user; reset otpHashed
-    createSendToken(user, 201, res);
-  })
-);
+  // if user does not exist return error message in response
+  if (!user) {
+    return next(
+      new AppError(
+        'The otp is invalid or has expired, Login to get new one',
+        400
+      )
+    );
+  }
+  // update account to active, and reset otp
+  user.otpHashed = undefined;
+  user.active = true;
+  await user.save();
+  // create and send login token to user; reset otpHashed
+  createSendToken(user, 201, res);
+});
 
-// B) Default placeholder handler before implementation of custom functions
+// C) User Login Handler
+exports.login = catchAsync(async (req, res, next) => {
+  // get email and password credentials from request body
+  const { email, password } = req.body;
+
+  // 1) Check if email and password exist in request body
+  if (!email || !password) {
+    return next(new AppError('Please provide email and password!', 400));
+  }
+
+  // 2) Retrieve user from database
+  // return user document and include hidden 'password' field: select('+password')
+  const user = await User.findOne({ email: email }).select('+password');
+
+  // 3) Check if user exists & Compare submitted password and stored password
+  // instance method used; throw error if user does not exist
+  if (!user || !(await user.correctPassword(password, user.password))) {
+    return next(new AppError('Incorrect email or password', 401));
+  }
+
+  // 4) If everything ok, Generate OTP and send to client / user email
+  let otp = await user.createOTP();
+
+  // email message
+  const message = `Your authenticate one time passcode is: ${otp}. Valid for ${process.env.OTP_EXPIRES_IN} minutes`;
+  // send otp to user email
+  await sendEmail({
+    email: user.email,
+    subject: 'authenticate: Your login one time passcode',
+    message,
+  });
+
+  // 5) return response to user
+  res.status(201).json({
+    status: 'success',
+    message: `one time login passcode sent to ${user.email}`,
+  });
+});
+
+// D) Default placeholder handler before implementation of custom functions
 exports.sendDefaultResponse = (req, res) => {
   res.status(200).json({
     status: 'success',
