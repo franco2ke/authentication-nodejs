@@ -1,9 +1,11 @@
 const crypto = require('crypto');
+const { promisify } = require('util'); // promisify method
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const AppError = require('../utils/appError');
 const sendEmail = require('../utils/email');
 const catchAsync = require('../utils/catchAsync');
+const { read } = require('fs');
 
 // Helper function 1: Create JWT token with user ID as payload
 // JWT token used for STATELESS Login
@@ -76,12 +78,12 @@ exports.signup = catchAsync(async (req, res, next) => {
   // send
   res.status(201).json({
     status: 'success',
-    message: `one time sign up passcode sent to ${newUser.email}`,
+    message: `Sign up OTP, one time passcode  sent to ${newUser.email}`,
   });
 });
 
 // B) Verify Account Handler
-// verifies signup OTP & marks email as confirmed
+// verifies signup & Login OTP & marks email as confirmed
 exports.verify = catchAsync(async (req, res, next) => {
   // encrypt returned OTP and compare in DB
   const otp = crypto.createHash('sha256').update(req.body.otp).digest('hex');
@@ -159,3 +161,52 @@ exports.sendDefaultResponse = (req, res) => {
     },
   });
 };
+
+// D) User Login verification Handler
+exports.protect = catchAsync(async (req, res, next) => {
+  // 1) Get token and check if it actually exists
+  let token;
+  // NOTE express turns all request.body header keys to lowercase
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    // separate token string out from header string
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    return next(
+      new AppError('You are not logged in! Please log in to get access.', 401)
+    );
+  }
+
+  // 2) Verify Token has not expired and its signature is valid (jwt.verify())
+  // promisify needed because jwt.verify takes a callback to run asynchronously
+  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+  // handle JSONTokenError & TokenExpiredError in Global Error Controller
+  // view decoded payload
+  console.log(decoded);
+
+  // 3) Check if user exists and LOAD user
+  const currentUser = await User.findById(decoded.id);
+  // Generate error if user not found in DB
+  if (!currentUser) {
+    return next(
+      new AppError('The user belonging to this token no longer exists.', 401)
+    );
+  }
+
+  // 4) Check if user changed password after the token was issued (Security Measure)
+  // iat: issued at time
+  if (currentUser.changedPasswordAfter(decoded.iat)) {
+    return next(
+      new AppError('User recently changed password! Please log in again.', 401)
+    );
+  }
+
+  // Grant access to protected route
+  // NOTE: add user data to request object for use in next middleware
+  req.user = currentUser;
+  next();
+});
