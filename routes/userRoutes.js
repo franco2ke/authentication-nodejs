@@ -8,7 +8,6 @@ const router = express.Router();
 router.post('/signup', authController.signup);
 router.post('/verify', authController.verify);
 router.post('/login', authController.login);
-router.post('/mfa', authController.sendDefaultResponse);
 router.post('/forgotPassword', authController.sendDefaultResponse);
 router.patch('/resetPassword/:token', authController.sendDefaultResponse);
 router.patch('/updateMyPassword/:token', authController.sendDefaultResponse);
@@ -21,7 +20,7 @@ router.delete('/deleteMe', authController.sendDefaultResponse);
 // get all users, create a new user
 router
   .route('/')
-  .get(authController.sendDefaultResponse)
+  .get(authController.protect, authController.sendDefaultResponse)
   .post(authController.sendDefaultResponse);
 // get, update, delete, specific user
 router

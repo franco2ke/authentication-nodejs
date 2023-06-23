@@ -1,6 +1,16 @@
 // Import the custom error module
 const AppError = require('../utils/appError');
 
+// Handle Duplicate Field errors
+const handleDuplicateFieldsDB = (err) => {
+  // Retrieve duplicate field name & value
+  // const fieldKeyValue = err.errmsg.match(/(["'])(?:(?=(\\?))\2.)*?\1/)[0];
+  const fieldKeyValue = Object.entries(err.keyValue);
+  const message = `Duplicate field, ${fieldKeyValue[0][0]}: ${fieldKeyValue[0][1]}. Please use another value!`;
+
+  return new AppError(message, 400);
+};
+
 // Send error response in the development environment with full details
 const sendErrorDev = (err, res) => {
   res.status(err.statusCode).json({
@@ -32,6 +42,14 @@ const sendErrorProd = (err, res) => {
   }
 };
 
+// Handle Invalid JWT Error
+const handleJWTError = () =>
+  new AppError('Invalid token, Please log in again!', 401);
+
+// Handle Expired JWT Error
+const handleJWTExpiredError = () =>
+  new AppError('Expired token, Please log in again!', 401);
+
 // Error handling middleware
 module.exports = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500; // Set the status code to 500 if not already set
@@ -51,6 +69,12 @@ module.exports = (err, req, res, next) => {
     // let error = JSON.parse(JSON.stringify(err)); //NOTE <-- This works for whatever reason
 
     // TODO Handle Custom errors here
+    // Handle Duplicate Key error: (post duplicate item) code: 11000
+    if (err.code === 11000) error = handleDuplicateFieldsDB(err);
+    // Handle Invalid JWT login token
+    if (error.name === 'JsonWebTokenError') error = handleJWTError();
+    // Handle Expired JWT login token
+    if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
 
     sendErrorProd(error, res);
   }

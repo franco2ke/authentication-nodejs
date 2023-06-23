@@ -126,6 +126,29 @@ userSchema.methods.correctPassword = async function (
   return await bcrypt.compare(candidatePassword, userPassword);
 };
 
+// 4) Check if password has been changed after JWT token was issued
+userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
+  // Check if 'passwordChangeAt' field exists and if it has a value
+  // Remember 'this' points to current document inside an instance method
+  if (this.passwordChangedAt) {
+    // Date.getTime() converts passwordChangedAt Date to a timestamp.
+    // "timestamp" represents a date as the numboer of ms since JAN 1, 1970 0.00HRS
+    // NOTE: JWTTimestamp is in seconds and Date.getTime() is in milliseconds (ms)
+    // Date.getTime()/1000 to turn ms to seconds for comparison
+    const changedAtTimestamp = parseInt(
+      this.passwordChangedAt.getTime() / 1000,
+      10
+    );
+
+    // if password has been changed after login, JWTTimestamp will be lesser than
+    // changedAtTimestamp in which case return ture.
+    return JWTTimestamp < changedAtTimestamp;
+  }
+
+  // False means Password NOT changed
+  return false;
+};
+
 const User = mongoose.model('User', userSchema);
 
 // Export the User model
